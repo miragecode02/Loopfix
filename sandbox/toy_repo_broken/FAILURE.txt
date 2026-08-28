@@ -1,0 +1,41 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 1 item
+
+test_checkout.py::test_checkout_total_rounds_to_two_decimals FAILED      [100%]
+
+=================================== FAILURES ===================================
+__________________ test_checkout_total_rounds_to_two_decimals __________________
+
+    def test_checkout_total_rounds_to_two_decimals():
+>       assert checkout_total(19.99, 10) == 17.99
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test_checkout.py:5:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+price = 19.99, discount_percent = 10
+
+    def checkout_total(price, discount_percent):
+        # Written against pricing v1.x, where `rounding` was the third
+        # positional argument.
+>       return apply_discount(price, discount_percent, 2)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+E       TypeError: apply_discount() takes 2 positional arguments but 3 were given
+
+checkout.py:7: TypeError
+=========================== short test summary info ============================
+FAILED test_checkout.py::test_checkout_total_rounds_to_two_decimals - TypeErr...
+============================== 1 failed in 0.29s ===============================
+
+Ground truth root cause: pricing.py's apply_discount() was bumped to a
+version where `rounding` became keyword-only (previously the third
+positional argument). checkout.py still calls it positionally
+(`apply_discount(price, discount_percent, 2)`), which now raises
+TypeError instead of succeeding.
