@@ -1,4 +1,5 @@
-"""Groq/OpenAI-style tool schemas for the investigation-only tool set.
+"""Groq/OpenAI-style tool schemas: read-only investigation tools plus
+the write/test-execution tools used by the bounded fix loop.
 
 Every tool requires a `reason` string so each call is self-documenting
 in the execution log (tool name, input, output, and why it was
@@ -78,3 +79,77 @@ READ_ONLY_TOOL_SCHEMAS = [
         },
     },
 ]
+
+WRITE_TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": (
+                "Replace one exact, unique occurrence of old_str with new_str in an "
+                "existing file. Fails if old_str isn't found or matches more than once "
+                "— widen it with more surrounding context rather than retrying blindly. "
+                "Never rewrite a whole file with this; target only the lines changing."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    **_REASON_PROPERTY,
+                    "path": {"type": "string", "description": "File path relative to the repo root."},
+                    "old_str": {"type": "string", "description": "Exact existing text to replace, with enough context to be unique in the file."},
+                    "new_str": {"type": "string", "description": "Replacement text."},
+                },
+                "required": ["reason", "path", "old_str", "new_str"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_file",
+            "description": "Create a brand-new file with the given content. Fails if the file already exists — use edit_file for existing files.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    **_REASON_PROPERTY,
+                    "path": {"type": "string", "description": "File path relative to the repo root."},
+                    "content": {"type": "string", "description": "Full content of the new file."},
+                },
+                "required": ["reason", "path", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_tests",
+            "description": (
+                "Run the repo's pytest suite inside an isolated Docker sandbox (no "
+                "network, hard timeout) and return pass/fail plus full output. A fix "
+                "isn't done until this reports passed=true — never claim success without it."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    **_REASON_PROPERTY,
+                    "target": {"type": "string", "description": "Optional specific test file/path to run instead of the whole suite."},
+                },
+                "required": ["reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_diff",
+            "description": "Show the git diff of all changes made so far in the repo.",
+            "parameters": {
+                "type": "object",
+                "properties": {**_REASON_PROPERTY},
+                "required": ["reason"],
+            },
+        },
+    },
+]
+
+ALL_TOOL_SCHEMAS = READ_ONLY_TOOL_SCHEMAS + WRITE_TOOL_SCHEMAS
