@@ -137,7 +137,7 @@ def investigate(repo_root, task_description, model=None, max_tool_calls=MAX_TOOL
                 model=model, messages=messages, temperature=TEMPERATURE
             )
             final = response.choices[0].message
-            return {"report": final.content, "call_log": call_log, "messages": messages}
+            return {"report": final.content, "call_log": call_log, "messages": messages, "model": model}
 
         response = client.chat.completions.create(
             model=model,
@@ -150,7 +150,7 @@ def investigate(repo_root, task_description, model=None, max_tool_calls=MAX_TOOL
         messages.append(message.model_dump(exclude_none=True))
 
         if not message.tool_calls:
-            return {"report": message.content, "call_log": call_log, "messages": messages}
+            return {"report": message.content, "call_log": call_log, "messages": messages, "model": model}
 
         for tool_call in message.tool_calls:
             log_entry, tool_message = _execute_tool_call(dispatch, tool_call)
@@ -245,6 +245,7 @@ def fix(
                 "messages": messages,
                 "resolved": resolved,
                 "test_iterations": test_iterations,
+                "model": model,
             }
 
         response = client.chat.completions.create(
@@ -264,11 +265,17 @@ def fix(
                 "messages": messages,
                 "resolved": resolved,
                 "test_iterations": test_iterations,
+                "model": model,
             }
 
         pending_nudge = None
         for tool_call in message.tool_calls:
             log_entry, tool_message = _execute_tool_call(dispatch, tool_call)
+            # Tags which debug round this action belongs to, for the log
+            # viewer: everything up to and including a run_tests call is
+            # part of that attempt number (mutating in place is safe —
+            # call_log holds a reference to the same dict).
+            log_entry["iteration"] = test_iterations
             call_log.append(log_entry)
             messages.append(tool_message)
             total_calls += 1
@@ -279,6 +286,7 @@ def fix(
             # the next one, before any other role appears.
             if log_entry["tool"] == "run_tests":
                 test_iterations += 1
+                log_entry["iteration"] = test_iterations
                 output = log_entry["output"]
                 if isinstance(output, dict) and output.get("passed") is True:
                     resolved = True

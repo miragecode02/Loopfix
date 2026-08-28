@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent.loop import investigate  # noqa: E402
+from agent.task_log import run_and_log  # noqa: E402
 
 SANDBOX_DIR = Path(__file__).resolve().parent.parent / "sandbox"
 
@@ -46,7 +47,7 @@ def main():
     pytest_output = load_pytest_output(failure_file)
     task_description = TASK_TEMPLATE.format(pytest_output=pytest_output)
 
-    result = investigate(str(repo_root), task_description)
+    result, log_path = run_and_log(investigate, "investigate", str(repo_root), task_description)
 
     print("=== REPORT ===")
     print(result["report"])
@@ -54,6 +55,7 @@ def main():
     print(f"=== CALL LOG ({len(result['call_log'])} tool calls) ===")
     for entry in result["call_log"]:
         print(f"- {entry['tool']}({entry['input']}) reason={entry['reason']!r}")
+    print(f"\nlog saved to {log_path}")
 
 
 if __name__ == "__main__":

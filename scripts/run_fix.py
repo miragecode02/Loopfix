@@ -13,12 +13,14 @@ pytest output (ground truth stripped before it reaches the agent).
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent.loop import fix  # noqa: E402
+from agent.loop import MAX_FIX_ITERATIONS, fix  # noqa: E402
+from agent.task_log import build_log, save_log  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SANDBOX_DIR = ROOT / "sandbox"
@@ -69,7 +71,23 @@ def main():
     workspace = make_git_workspace(repo_name)
     print(f"workspace: {workspace}")
 
+    started_at = time.time()
     result = fix(str(workspace), task_description)
+    finished_at = time.time()
+
+    diff_proc = subprocess.run(["git", "diff"], cwd=workspace, capture_output=True, text=True)
+
+    log = build_log(
+        mode="fix",
+        repo_root=str(workspace),
+        task_description=task_description,
+        result=result,
+        max_iterations=MAX_FIX_ITERATIONS,
+        started_at=started_at,
+        finished_at=finished_at,
+        extra={"diff": diff_proc.stdout},
+    )
+    log_path = save_log(log)
 
     print(f"\n=== RESOLVED: {result['resolved']} (test_iterations={result['test_iterations']}) ===")
     print("\n=== REPORT ===")
@@ -84,9 +102,9 @@ def main():
             if isinstance(output, dict):
                 print(f"    passed={output.get('passed')} returncode={output.get('returncode')}")
 
-    diff_proc = subprocess.run(["git", "diff"], cwd=workspace, capture_output=True, text=True)
     print("\n=== FINAL DIFF ===")
     print(diff_proc.stdout or "(no changes)")
+    print(f"\nlog saved to {log_path}")
 
 
 if __name__ == "__main__":
