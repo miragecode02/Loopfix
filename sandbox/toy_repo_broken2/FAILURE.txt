@@ -1,0 +1,41 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 1 item
+
+test_settings.py::test_get_timeout_returns_default FAILED                [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_get_timeout_returns_default _______________________
+
+    def test_get_timeout_returns_default():
+>       assert get_timeout({}) == 30
+               ^^^^^^^^^^^^^^^
+
+test_settings.py:5:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw_settings = {}
+
+    def get_timeout(raw_settings):
+        # Written against config v2.x, where the lookup method was
+        # called `get_value`.
+        cfg = Config(raw_settings)
+>       return cfg.get_value("timeout", 30)
+               ^^^^^^^^^^^^^
+
+E       AttributeError: 'Config' object has no attribute 'get_value'
+
+settings.py:8: AttributeError
+=========================== short test summary info ============================
+FAILED test_settings.py::test_get_timeout_returns_default - AttributeError: '...
+============================== 1 failed in 0.19s ===============================
+
+Ground truth root cause: config.py's Config class was bumped to a
+version where the lookup method was renamed from `get_value` to
+`value`. settings.py still calls `cfg.get_value(...)`, from before
+the rename, which now raises AttributeError.
