@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Loopfix Task Log Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #666666;
+    --border: #dddddd;
+    --card: #f7f7f8;
+    --code-bg: #f0f0f2;
+    --accent: #2f6fed;
+    --ok: #1a7f37;
+    --fail: #cf222e;
+    --diff-add-bg: #e6ffed;
+    --diff-add-fg: #1a7f37;
+    --diff-del-bg: #ffeef0;
+    --diff-del-fg: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e0e10;
+      --fg: #e8e8e8;
+      --muted: #9a9a9a;
+      --border: #333333;
+      --card: #18181b;
+      --code-bg: #1c1c1f;
+      --accent: #6ea8fe;
+      --ok: #3fb950;
+      --fail: #f85149;
+      --diff-add-bg: #0f2c1a;
+      --diff-add-fg: #3fb950;
+      --diff-del-bg: #34090c;
+      --diff-del-fg: #f85149;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+  .subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+    padding: 1rem; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); margin-bottom: 1.5rem;
+  }
+  button, input[type=file]::file-selector-button {
+    font: inherit; padding: 0.45rem 0.9rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+    cursor: pointer;
+  }
+  button:hover, input[type=file]::file-selector-button:hover { border-color: var(--accent); }
+  .status { font-size: 0.85rem; color: var(--muted); }
+  .status.error { color: var(--fail); }
+
+  .card {
+    border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem; background: var(--card);
+  }
+  .card h2 { font-size: 1rem; margin: 0 0 0.75rem; }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem 1.5rem; font-size: 0.9rem;
+  }
+  .meta-grid .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .badge {
+    display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; border: 1px solid var(--border);
+  }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  .badge.fail { color: var(--fail); border-color: var(--fail); }
+  .badge.neutral { color: var(--muted); }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.75rem; overflow-x: auto; font-size: 0.82rem; white-space: pre-wrap;
+    word-break: break-word;
+  }
+  details > summary { cursor: pointer; font-weight: 600; margin-bottom: 0.5rem; }
+
+  .iteration-heading {
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted); margin: 1.25rem 0 0.5rem;
+  }
+  .call {
+    border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 0.85rem;
+    margin-bottom: 0.6rem; background: var(--bg);
+  }
+  .call-head { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+  .tool-name { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--accent); }
+  .reason { color: var(--muted); font-size: 0.85rem; }
+  .call pre { margin: 0.5rem 0 0; }
+  .call .field-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 0.4rem; }
+
+  .diff-line-add { background: var(--diff-add-bg); color: var(--diff-add-fg); display: block; }
+  .diff-line-del { background: var(--diff-del-bg); color: var(--diff-del-fg); display: block; }
+  .diff-line-hunk { color: var(--accent); display: block; }
+
+  footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Loopfix Task Log Viewer</h1>
+  <p class="subtitle">Pretty-prints a Loopfix structured JSON task log: run metadata, the tool-call timeline, and the final report. No server required — everything runs client-side.</p>
+
+  <div class="controls">
+    <label for="file-input">Load a log file:</label>
+    <input type="file" id="file-input" accept="application/json,.json">
+    <span>or</span>
+    <button id="load-example-1" type="button">Load example: toy_repo_broken</button>
+    <button id="load-example-2" type="button">Load example: toy_repo_broken2</button>
+    <span id="status" class="status"></span>
+  </div>
+
+  <div id="output"></div>
+
+  <footer>Loopfix — structured JSON logs live in <code>logs/</code> at runtime; curated examples are committed under <code>examples/logs/</code>.</footer>
+</div>
+
+<script>
+(function () {
+  const fileInput = document.getElementById('file-input');
+  const output = document.getElementById('output');
+  const status = document.getElementById('status');
+
+  function setStatus(msg, isError) {
+    status.textContent = msg || '';
+    status.className = 'status' + (isError ? ' error' : '');
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+  }
+
+  function fmtTime(epochSeconds) {
+    if (typeof epochSeconds !== 'number') return '—';
+    return new Date(epochSeconds * 1000).toLocaleString();
+  }
+
+  function el(tag, attrs, children) {
+    const node = document.createElement(tag);
+    if (attrs) {
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'class') node.className = v;
+        else if (k === 'text') node.textContent = v;
+        else node.setAttribute(k, v);
+      }
+    }
+    (children || []).forEach((c) => node.appendChild(c));
+    return node;
+  }
+
+  function renderDiff(diffText) {
+    const pre = document.createElement('pre');
+    diffText.split('\n').forEach((line) => {
+      const span = document.createElement('span');
+      if (line.startsWith('+') && !line.startsWith('+++')) span.className = 'diff-line-add';
+      else if (line.startsWith('-') && !line.startsWith('---')) span.className = 'diff-line-del';
+      else if (line.startsWith('@@')) span.className = 'diff-line-hunk';
+      else span.style.display = 'block';
+      span.textContent = line;
+      pre.appendChild(span);
+    });
+    return pre;
+  }
+
+  function renderCallEntry(entry) {
+    const head = el('div', { class: 'call-head' }, [
+      el('span', { class: 'tool-name', text: entry.tool }),
+      el('span', { class: 'reason', text: entry.reason ? '— ' + entry.reason : '' }),
+    ]);
+    const card = el('div', { class: 'call' }, [head]);
+
+    const input = { ...entry.input };
+    if (Object.keys(input).length) {
+      card.appendChild(el('div', { class: 'field-label', text: 'input' }));
+      card.appendChild(el('pre', { text: JSON.stringify(input, null, 2) }));
+    }
+
+    card.appendChild(el('div', { class: 'field-label', text: 'output' }));
+    const outputText = typeof entry.output === 'string' ? entry.output : JSON.stringify(entry.output, null, 2);
+    card.appendChild(el('pre', { text: outputText }));
+
+    return card;
+  }
+
+  function renderLog(log) {
+    output.innerHTML = '';
+
+    const resolvedBadge = log.resolved === true
+      ? el('span', { class: 'badge ok', text: 'resolved' })
+      : log.resolved === false
+        ? el('span', { class: 'badge fail', text: 'unresolved' })
+        : el('span', { class: 'badge neutral', text: 'investigation only' });
+
+    function metaField(label, value) {
+      return el('div', {}, [
+        el('div', { class: 'label', text: label }),
+        el('div', { text: value }),
+      ]);
+    }
+
+    const meta = el('div', { class: 'card' }, [
+      el('h2', { text: `Task ${log.task_id || ''}` }),
+      el('div', { class: 'meta-grid' }, [
+        metaField('Mode', log.mode || '—'),
+        metaField('Model', log.model || '—'),
+        metaField('Started', fmtTime(log.started_at)),
+        metaField('Duration', (log.duration_seconds ?? '—') + 's'),
+        metaField('Test iterations', `${log.test_iterations ?? '—'} / ${log.max_iterations ?? '—'}`),
+        metaField('Tool calls', String((log.call_log || []).length)),
+      ]),
+    ]);
+    meta.querySelector('h2').appendChild(document.createTextNode(' '));
+    meta.querySelector('h2').appendChild(resolvedBadge);
+    output.appendChild(meta);
+
+    const taskDetails = el('details', { class: 'card' });
+    taskDetails.appendChild(el('summary', { text: 'Task description (as given to the agent)' }));
+    taskDetails.appendChild(el('pre', { text: log.task_description || '' }));
+    output.appendChild(taskDetails);
+
+    const timelineCard = el('div', { class: 'card' }, [el('h2', { text: 'Tool-call timeline' })]);
+    const callLog = log.call_log || [];
+    if (log.mode === 'fix') {
+      let currentIteration = null;
+      callLog.forEach((entry) => {
+        if (entry.iteration !== currentIteration) {
+          currentIteration = entry.iteration;
+          const label = currentIteration === 0 ? 'Before first test run' : `Attempt ${currentIteration}`;
+          timelineCard.appendChild(el('div', { class: 'iteration-heading', text: label }));
+        }
+        timelineCard.appendChild(renderCallEntry(entry));
+      });
+    } else {
+      callLog.forEach((entry) => timelineCard.appendChild(renderCallEntry(entry)));
+    }
+    if (!callLog.length) timelineCard.appendChild(el('p', { text: 'No tool calls recorded.' }));
+    output.appendChild(timelineCard);
+
+    if (log.diff) {
+      const diffDetails = el('details', { class: 'card' });
+      diffDetails.open = true;
+      diffDetails.appendChild(el('summary', { text: 'Diff' }));
+      diffDetails.appendChild(renderDiff(log.diff));
+      output.appendChild(diffDetails);
+    }
+
+    const reportCard = el('div', { class: 'card' }, [
+      el('h2', { text: 'Final report' }),
+      el('pre', { text: log.report || '(no report)' }),
+    ]);
+    output.appendChild(reportCard);
+  }
+
+  function loadFromText(text, sourceLabel) {
+    try {
+      const log = JSON.parse(text);
+      renderLog(log);
+      setStatus(`Loaded ${sourceLabel}.`);
+    } catch (e) {
+      setStatus(`Could not parse ${sourceLabel} as JSON: ${e.message}`, true);
+    }
+  }
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadFromText(reader.result, file.name);
+    reader.onerror = () => setStatus(`Could not read ${file.name}.`, true);
+    reader.readAsText(file);
+  });
+
+  function loadExample(relativePath, label) {
+    setStatus(`Loading ${label}…`);
+    fetch(relativePath)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((text) => loadFromText(text, label))
+      .catch((e) => {
+        setStatus(
+          `Could not fetch ${label} (${e.message}). This only works when the page is served ` +
+          `over http (e.g. "python -m http.server" from the project root) — file:// pages can't ` +
+          `fetch local files. Use "Load a log file" and pick ${relativePath} instead.`,
+          true
+        );
+      });
+  }
+
+  document.getElementById('load-example-1').addEventListener('click', () => {
+    loadExample('../examples/logs/fix_toy_repo_broken.json', 'toy_repo_broken example');
+  });
+  document.getElementById('load-example-2').addEventListener('click', () => {
+    loadExample('../examples/logs/fix_toy_repo_broken2.json', 'toy_repo_broken2 example');
+  });
+})();
+</script>
+</body>
+</html>
