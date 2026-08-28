@@ -73,9 +73,11 @@ def run_tests(repo_path, pytest_args=None, timeout=DEFAULT_TIMEOUT_SECONDS):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("repo_path", help="Absolute path to the repo to mount and test")
-    parser.add_argument("pytest_args", nargs="*", help="Args passed through to pytest")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("repo_path", help="Absolute path to the repo to mount and test")
+    parser.add_argument(
+        "pytest_args", nargs=argparse.REMAINDER, help="Args passed through to pytest"
+    )
     args = parser.parse_args()
 
     result = run_tests(args.repo_path, args.pytest_args, timeout=args.timeout)
