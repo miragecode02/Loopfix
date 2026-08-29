@@ -1,0 +1,100 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 1 item
+
+test_polyfield_serialize.py::test_polyfield_serializes_nested_object FAILED [100%]
+
+=================================== FAILURES ===================================
+___________________ test_polyfield_serializes_nested_object ____________________
+
+self = <fields.PolyField(dump_default=<marshmallow.missing>, attribute=None, validate=None, required=False, load_only=False, ...equired': 'Missing data for required field.', 'null': 'Field may not be null.', 'validator_failed': 'Invalid value.'})>
+value = <test_polyfield_serialize.Cat object at 0x7102ce22dc50>, key = 'pet'
+obj = <test_polyfield_serialize.Pet object at 0x7102cd51af90>
+
+    def _serialize(self, value, key, obj):
+        if value is None:
+            return None
+        try:
+            if self.many:
+                res = []
+                for v in value:
+                    schema = self.serialization_schema_selector(v, obj)
+                    schema.context.update(getattr(self, 'context', {}))
+                    res.append(schema.dump(v).data)
+                return res
+            else:
+                schema = self.serialization_schema_selector(value, obj)
+>               schema.context.update(getattr(self, 'context', {}))
+                ^^^^^^^^^^^^^^
+E               AttributeError: 'CatSchema' object has no attribute 'context'
+
+marshmallow_polyfield/polyfield.py:81: AttributeError
+
+During handling of the above exception, another exception occurred:
+
+    def test_polyfield_serializes_nested_object():
+>       result = PetSchema().dump(Pet(pet=Cat(name="Tom")))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test_polyfield_serialize.py:32:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/usr/local/lib/python3.11/site-packages/marshmallow/schema.py:572: in dump
+    result = self._serialize(processed_obj, many=many)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/marshmallow/schema.py:541: in _serialize
+    value = field_obj.serialize(attr_name, obj, accessor=self.get_attribute)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/marshmallow/fields.py:340: in serialize
+    return self._serialize(value, attr, obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <fields.PolyField(dump_default=<marshmallow.missing>, attribute=None, validate=None, required=False, load_only=False, ...equired': 'Missing data for required field.', 'null': 'Field may not be null.', 'validator_failed': 'Invalid value.'})>
+value = <test_polyfield_serialize.Cat object at 0x7102ce22dc50>, key = 'pet'
+obj = <test_polyfield_serialize.Pet object at 0x7102cd51af90>
+
+    def _serialize(self, value, key, obj):
+        if value is None:
+            return None
+        try:
+            if self.many:
+                res = []
+                for v in value:
+                    schema = self.serialization_schema_selector(v, obj)
+                    schema.context.update(getattr(self, 'context', {}))
+                    res.append(schema.dump(v).data)
+                return res
+            else:
+                schema = self.serialization_schema_selector(value, obj)
+                schema.context.update(getattr(self, 'context', {}))
+                return schema.dump(value).data
+        except Exception as err:
+>           raise TypeError(
+                'Failed to serialize object. Error: {0}\n'
+                ' Ensure the serialization_schema_selector exists and '
+                ' returns a Schema and that schema'
+                ' can serialize this value {1}'.format(err, value))
+E           TypeError: Failed to serialize object. Error: 'CatSchema' object has no attribute 'context'
+E            Ensure the serialization_schema_selector exists and  returns a Schema and that schema can serialize this value <test_polyfield_serialize.Cat object at 0x7102ce22dc50>
+
+marshmallow_polyfield/polyfield.py:84: TypeError
+=========================== short test summary info ============================
+FAILED test_polyfield_serialize.py::test_polyfield_serializes_nested_object
+============================== 1 failed in 0.26s ===============================
+
+Ground truth root cause: polyfield.py's PolyField._serialize does
+`schema.context.update(getattr(self, 'context', {}))`, assuming every
+Schema instance has a `.context` attribute by default — true in the
+marshmallow 2.x/3.x era this code was written against. requirements.txt
+pins marshmallow>=4.0,<5; marshmallow 4 dropped that always-present
+`context` attribute, so a freshly-instantiated CatSchema() no longer
+has one, and the line raises AttributeError (caught and re-raised as
+TypeError by polyfield.py's own error handling). The fix is to not
+assume `.context` exists — e.g. `schema.context = getattr(self,
+'context', {})` guarded by `hasattr`, or set it unconditionally instead
+of updating an attribute that may not exist.

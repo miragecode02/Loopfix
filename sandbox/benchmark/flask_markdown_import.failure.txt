@@ -1,0 +1,35 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting test_markdown_filter.py ___________________
+ImportError while importing test module '/workspace/test_markdown_filter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test_markdown_filter.py:1: in <module>
+    from flaskext.markdown import Markdown
+flaskext/markdown.py:32: in <module>
+    from flask import Markup
+E   ImportError: cannot import name 'Markup' from 'flask' (/usr/local/lib/python3.11/site-packages/flask/__init__.py)
+=========================== short test summary info ============================
+ERROR test_markdown_filter.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.54s ===============================
+
+Ground truth root cause: flaskext/markdown.py does `from flask import
+Markup` at module load time. Flask re-exported `Markup` (really
+`markupsafe.Markup`) for backwards compatibility through the 2.x
+series, deprecated it in Flask 2.3, and removed the re-export entirely
+in Flask 3.0. requirements.txt pins flask>=3.0, so the import fails
+immediately, before any test body runs. The fix is to import Markup
+from markupsafe directly (`from markupsafe import Markup`), which has
+always been the real home of that class.

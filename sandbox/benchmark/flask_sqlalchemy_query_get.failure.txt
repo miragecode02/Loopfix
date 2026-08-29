@@ -1,0 +1,131 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 4 items
+
+tests/test_basic_app.py::test_basic_insert ERROR                         [ 25%]
+tests/test_basic_app.py::test_query_recording ERROR                      [ 50%]
+tests/test_basic_app.py::test_helper_api ERROR                           [ 75%]
+tests/test_basic_app.py::test_persist_selectable ERROR                   [100%]
+
+==================================== ERRORS ====================================
+_____________________ ERROR at setup of test_basic_insert ______________________
+
+app = <Flask 'test_basic_app'>
+
+    @pytest.fixture
+    def db(app):
+>       return fsa.SQLAlchemy(app)
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/conftest.py:20:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+flask_sqlalchemy/__init__.py:758: in __init__
+    _include_sqlalchemy(self, query_class)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+obj = <[AssertionError('The sqlalchemy extension was not registered to the current application.  Please make sure to call init_app() first.') raised in repr()] SQLAlchemy object at 0x7fae6d91a950>
+cls = <class 'flask_sqlalchemy.BaseQuery'>
+
+    def _include_sqlalchemy(obj, cls):
+        for module in sqlalchemy, sqlalchemy.orm:
+>           for key in module.__all__:
+                       ^^^^^^^^^^^^^^
+E           AttributeError: module 'sqlalchemy' has no attribute '__all__'
+
+flask_sqlalchemy/__init__.py:112: AttributeError
+____________________ ERROR at setup of test_query_recording ____________________
+
+app = <Flask 'test_basic_app'>
+
+    @pytest.fixture
+    def db(app):
+>       return fsa.SQLAlchemy(app)
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/conftest.py:20:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+flask_sqlalchemy/__init__.py:758: in __init__
+    _include_sqlalchemy(self, query_class)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+obj = <[AssertionError('The sqlalchemy extension was not registered to the current application.  Please make sure to call init_app() first.') raised in repr()] SQLAlchemy object at 0x7fae6d8a4c90>
+cls = <class 'flask_sqlalchemy.BaseQuery'>
+
+    def _include_sqlalchemy(obj, cls):
+        for module in sqlalchemy, sqlalchemy.orm:
+>           for key in module.__all__:
+                       ^^^^^^^^^^^^^^
+E           AttributeError: module 'sqlalchemy' has no attribute '__all__'
+
+flask_sqlalchemy/__init__.py:112: AttributeError
+______________________ ERROR at setup of test_helper_api _______________________
+
+app = <Flask 'test_basic_app'>
+
+    @pytest.fixture
+    def db(app):
+>       return fsa.SQLAlchemy(app)
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/conftest.py:20:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+flask_sqlalchemy/__init__.py:758: in __init__
+    _include_sqlalchemy(self, query_class)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+obj = <[AssertionError('The sqlalchemy extension was not registered to the current application.  Please make sure to call init_app() first.') raised in repr()] SQLAlchemy object at 0x7fae6d906450>
+cls = <class 'flask_sqlalchemy.BaseQuery'>
+
+    def _include_sqlalchemy(obj, cls):
+        for module in sqlalchemy, sqlalchemy.orm:
+>           for key in module.__all__:
+                       ^^^^^^^^^^^^^^
+E           AttributeError: module 'sqlalchemy' has no attribute '__all__'
+
+flask_sqlalchemy/__init__.py:112: AttributeError
+__________________ ERROR at setup of test_persist_selectable ___________________
+
+app = <Flask 'test_basic_app'>
+
+    @pytest.fixture
+    def db(app):
+>       return fsa.SQLAlchemy(app)
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/conftest.py:20:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+flask_sqlalchemy/__init__.py:758: in __init__
+    _include_sqlalchemy(self, query_class)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+obj = <[AssertionError('The sqlalchemy extension was not registered to the current application.  Please make sure to call init_app() first.') raised in repr()] SQLAlchemy object at 0x7fae6d94a890>
+cls = <class 'flask_sqlalchemy.BaseQuery'>
+
+    def _include_sqlalchemy(obj, cls):
+        for module in sqlalchemy, sqlalchemy.orm:
+>           for key in module.__all__:
+                       ^^^^^^^^^^^^^^
+E           AttributeError: module 'sqlalchemy' has no attribute '__all__'
+
+flask_sqlalchemy/__init__.py:112: AttributeError
+=========================== short test summary info ============================
+ERROR tests/test_basic_app.py::test_basic_insert - AttributeError: module 'sq...
+ERROR tests/test_basic_app.py::test_query_recording - AttributeError: module ...
+ERROR tests/test_basic_app.py::test_helper_api - AttributeError: module 'sqla...
+ERROR tests/test_basic_app.py::test_persist_selectable - AttributeError: modu...
+============================== 4 errors in 0.53s ===============================
+
+Ground truth root cause: This repo (Flask-SQLAlchemy 2.5.1) only pins
+SQLAlchemy>=0.8.0 upstream. SQLAlchemy 2.0 restructured its top-level
+package and no longer exposes sqlalchemy.__all__ / sqlalchemy.orm.__all__
+the way 1.x did. flask_sqlalchemy/__init__.py's _include_sqlalchemy()
+(around line 108-115) iterates module.__all__ for both sqlalchemy and
+sqlalchemy.orm to copy every public name onto the convenience db
+object, called from SQLAlchemy.__init__ on every db = SQLAlchemy(app).
+Once SQLAlchemy is bumped to >=2.0, that raises AttributeError before
+any test can even get a working db fixture.

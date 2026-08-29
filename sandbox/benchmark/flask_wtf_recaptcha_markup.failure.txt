@@ -1,0 +1,40 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+collecting ... collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting tests/test_recaptcha.py ___________________
+ImportError while importing test module '/workspace/tests/test_recaptcha.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_recaptcha.py:8: in <module>
+    from flask_wtf import FlaskForm
+flask_wtf/__init__.py:4: in <module>
+    from .recaptcha import Recaptcha
+flask_wtf/recaptcha/__init__.py:1: in <module>
+    from .fields import RecaptchaField
+flask_wtf/recaptcha/fields.py:3: in <module>
+    from . import widgets
+flask_wtf/recaptcha/widgets.py:3: in <module>
+    from flask import Markup
+E   ImportError: cannot import name 'Markup' from 'flask' (/usr/local/lib/python3.11/site-packages/flask/__init__.py)
+=========================== short test summary info ============================
+ERROR tests/test_recaptcha.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.62s ===============================
+
+Ground truth root cause: This repo (Flask-WTF 1.0.1) has no explicit
+Flask version ceiling upstream. Flask 2.3 removed the flask.Markup
+re-export (it had only been deprecated before). flask_wtf/form.py was
+already updated to import Markup from markupsafe directly, but
+flask_wtf/recaptcha/widgets.py line 3 still does
+"from flask import Markup", so importing flask_wtf at all raises
+ImportError once Flask is bumped to >=2.3.

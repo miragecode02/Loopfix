@@ -1,0 +1,40 @@
+Captured by running `sandbox/runner.py` against this repo (real Docker
+sandbox run, not fabricated):
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /workspace
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting tests/test_login_url.py ___________________
+ImportError while importing test module '/workspace/tests/test_login_url.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_login_url.py:10: in <module>
+    from flask_login import LoginManager
+flask_login/__init__.py:12: in <module>
+    from .login_manager import LoginManager
+flask_login/login_manager.py:33: in <module>
+    from .utils import _create_identifier
+flask_login/utils.py:14: in <module>
+    from werkzeug.urls import url_decode
+E   ImportError: cannot import name 'url_decode' from 'werkzeug.urls' (/usr/local/lib/python3.11/site-packages/werkzeug/urls.py)
+=========================== short test summary info ============================
+ERROR tests/test_login_url.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.58s ===============================
+
+Ground truth root cause: This repo (Flask-Login 0.6.2) pins only
+Werkzeug>=1.0.1 upstream. Werkzeug 2.1 removed the deprecated
+werkzeug.urls.url_decode/url_encode helpers. flask_login/utils.py
+lines 14-15 still import them directly, and login_url() (around line
+126-130) uses them to round-trip the "next" redirect query parameter.
+Once Werkzeug is bumped to >=2.1, importing flask_login at all raises
+ImportError, so every test that touches it fails at collection.
