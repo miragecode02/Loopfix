@@ -7,13 +7,16 @@ the result into a simple pass/fail-oriented dict for the agent.
 
 from pathlib import Path
 
+from sandbox.runner import IMAGE as DEFAULT_IMAGE
 from sandbox.runner import run_tests as _run_in_sandbox
 
 
-def run_tests(repo_root, target=None, timeout=120):
+def run_tests(repo_root, target=None, timeout=120, image=None):
     abs_repo_root = str(Path(repo_root).resolve())
     pytest_args = [target] if target else []
-    result = _run_in_sandbox(abs_repo_root, pytest_args=pytest_args, timeout=timeout)
+    result = _run_in_sandbox(
+        abs_repo_root, pytest_args=pytest_args, timeout=timeout, image=image or DEFAULT_IMAGE
+    )
     return {
         "passed": result["returncode"] == 0 and not result["timed_out"],
         "returncode": result["returncode"],

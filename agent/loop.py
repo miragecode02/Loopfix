@@ -63,12 +63,12 @@ def _make_tool_dispatch(repo_root):
     }
 
 
-def _make_full_dispatch(repo_root):
+def _make_full_dispatch(repo_root, image=None):
     dispatch = _make_tool_dispatch(repo_root)
     dispatch.update({
         "edit_file": lambda args: edit_file(repo_root, args["path"], args["old_str"], args["new_str"]),
         "create_file": lambda args: create_file(repo_root, args["path"], args["content"]),
-        "run_tests": lambda args: run_tests_tool(repo_root, target=args.get("target")),
+        "run_tests": lambda args: run_tests_tool(repo_root, target=args.get("target"), image=image),
         "get_diff": lambda args: get_diff(repo_root),
     })
     return dispatch
@@ -193,6 +193,7 @@ def fix(
     model=None,
     max_iterations=MAX_FIX_ITERATIONS,
     max_tool_calls=MAX_FIX_TOOL_CALLS,
+    image=None,
 ):
     """Run the bounded fix/debug loop: investigate, edit, run_tests, repeat.
 
@@ -201,6 +202,10 @@ def fix(
     calls as a secondary safety bound. Returns {"report", "call_log",
     "messages", "resolved", "test_iterations"} — "resolved" reflects
     an actual passing run_tests call, not the model's say-so.
+
+    image, if given, overrides the sandbox image run_tests uses (for
+    benchmark tasks that need real third-party dependencies pinned
+    into a per-task image — see sandbox.runner.build_task_image).
     """
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
@@ -208,7 +213,7 @@ def fix(
 
     model = model or os.environ.get("GROQ_MODEL", DEFAULT_MODEL)
     client = Groq(api_key=api_key)
-    dispatch = _make_full_dispatch(repo_root)
+    dispatch = _make_full_dispatch(repo_root, image=image)
 
     system_prompt = FIX_SYSTEM_PROMPT.format(max_iterations=max_iterations)
     messages = [

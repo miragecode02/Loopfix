@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent.loop import MAX_FIX_ITERATIONS, fix  # noqa: E402
 from agent.task_log import build_log, save_log  # noqa: E402
+from sandbox.runner import build_task_image  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SANDBOX_DIR = ROOT / "sandbox"
@@ -71,8 +72,15 @@ def main():
     workspace = make_git_workspace(repo_name)
     print(f"workspace: {workspace}")
 
+    requirements_file = SANDBOX_DIR / repo_name / "requirements.txt"
+    image = None
+    if requirements_file.exists():
+        print(f"building task image from {requirements_file} ...")
+        image = build_task_image(SANDBOX_DIR / repo_name)
+        print(f"using task image: {image}")
+
     started_at = time.time()
-    result = fix(str(workspace), task_description)
+    result = fix(str(workspace), task_description, image=image)
     finished_at = time.time()
 
     diff_proc = subprocess.run(["git", "diff"], cwd=workspace, capture_output=True, text=True)
