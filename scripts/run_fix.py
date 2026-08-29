@@ -10,15 +10,14 @@ with a sibling <repo_dir_name>.failure.txt containing the captured
 pytest output (ground truth stripped before it reaches the agent).
 """
 
-import shutil
 import subprocess
 import sys
 import time
-import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from agent.eval_common import TASK_TEMPLATE, load_pytest_output, make_git_workspace  # noqa: E402
 from agent.loop import MAX_FIX_ITERATIONS, fix  # noqa: E402
 from agent.task_log import build_log, save_log  # noqa: E402
 from sandbox.runner import build_task_image  # noqa: E402
@@ -26,37 +25,6 @@ from sandbox.runner import build_task_image  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 SANDBOX_DIR = ROOT / "sandbox"
 WORKSPACES_DIR = ROOT / "workspaces"
-
-TASK_TEMPLATE = """Tests are failing in this repo after a dependency/library version bump.
-
-Failing pytest output:
-{pytest_output}
-
-Find the root cause and fix it so the tests pass."""
-
-
-def load_pytest_output(failure_file):
-    text = failure_file.read_text(encoding="utf-8")
-    return text.split("Ground truth root cause:")[0].strip()
-
-
-def make_git_workspace(repo_name):
-    src = SANDBOX_DIR / repo_name
-    dest = WORKSPACES_DIR / f"{repo_name}-{uuid.uuid4().hex[:8]}"
-    shutil.copytree(src, dest)
-
-    # Real cloned repos almost always ignore __pycache__; these toy
-    # fixtures don't have a .gitignore, so running pytest inside the
-    # sandbox would otherwise show up as diff noise (a tracked .pyc).
-    (dest / ".gitignore").write_text("__pycache__/\n*.pyc\n.pytest_cache/\n", encoding="utf-8")
-
-    def _git(args):
-        subprocess.run(["git", *args], cwd=dest, capture_output=True, text=True, check=True)
-
-    _git(["init", "-q"])
-    _git(["add", "-A"])
-    _git(["-c", "user.email=loopfix@example.com", "-c", "user.name=Loopfix", "commit", "-q", "-m", "initial broken state"])
-    return dest
 
 
 def main():
@@ -69,7 +37,7 @@ def main():
     pytest_output = load_pytest_output(failure_file)
     task_description = TASK_TEMPLATE.format(pytest_output=pytest_output)
 
-    workspace = make_git_workspace(repo_name)
+    workspace = make_git_workspace(SANDBOX_DIR / repo_name, WORKSPACES_DIR, repo_name)
     print(f"workspace: {workspace}")
 
     requirements_file = SANDBOX_DIR / repo_name / "requirements.txt"
