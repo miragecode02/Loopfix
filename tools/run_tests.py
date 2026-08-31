@@ -10,6 +10,11 @@ from pathlib import Path
 from sandbox.runner import IMAGE as DEFAULT_IMAGE
 from sandbox.runner import run_tests as _run_in_sandbox
 
+# Same rationale as read_file's MAX_UNRANGED_LINES: keep a single tool
+# result well under Groq's 8000-token single-request cap. The tail is
+# what matters for diagnosis (pytest's failure summary is printed last).
+MAX_OUTPUT_CHARS = 6000
+
 
 def run_tests(repo_root, target=None, timeout=120, image=None):
     abs_repo_root = str(Path(repo_root).resolve())
@@ -17,10 +22,14 @@ def run_tests(repo_root, target=None, timeout=120, image=None):
     result = _run_in_sandbox(
         abs_repo_root, pytest_args=pytest_args, timeout=timeout, image=image or DEFAULT_IMAGE
     )
+    output = (result["stdout"] + result["stderr"]).strip()
+    if len(output) > MAX_OUTPUT_CHARS:
+        omitted = len(output) - MAX_OUTPUT_CHARS
+        output = f"[... {omitted} earlier characters truncated ...]\n" + output[-MAX_OUTPUT_CHARS:]
     return {
         "passed": result["returncode"] == 0 and not result["timed_out"],
         "returncode": result["returncode"],
         "timed_out": result["timed_out"],
         "duration_seconds": result["duration_seconds"],
-        "output": (result["stdout"] + result["stderr"]).strip(),
+        "output": output,
     }

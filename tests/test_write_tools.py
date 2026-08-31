@@ -84,3 +84,26 @@ def test_run_tests_fails_on_broken_repo():
     result = run_tests(TOY_REPO_BROKEN)
     assert result["passed"] is False
     assert "TypeError" in result["output"]
+
+
+def test_run_tests_truncates_long_output(monkeypatch):
+    import tools.run_tests as run_tests_module
+
+    monkeypatch.setattr(run_tests_module, "MAX_OUTPUT_CHARS", 50)
+    monkeypatch.setattr(
+        run_tests_module,
+        "_run_in_sandbox",
+        lambda *a, **k: {
+            "returncode": 1,
+            "timed_out": False,
+            "duration_seconds": 0.1,
+            "stdout": "x" * 200,
+            "stderr": "",
+        },
+    )
+
+    result = run_tests_module.run_tests(TOY_REPO)
+
+    assert len(result["output"]) < 200
+    assert result["output"].startswith("[... ")
+    assert result["output"].endswith("x" * 50)

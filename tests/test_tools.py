@@ -47,6 +47,27 @@ def test_read_file_missing_file_raises():
         read_file(TOY_REPO, "does_not_exist.py")
 
 
+def test_read_file_unranged_read_truncates_long_file(tmp_path):
+    (tmp_path / "big.py").write_text("\n".join(f"x{i} = {i}" for i in range(500)) + "\n")
+
+    result = read_file(tmp_path, "big.py")
+
+    assert result["total_lines"] == 500
+    assert result["end_line"] == 300
+    assert "x299 = 299" in result["content"]
+    assert "x300 = 300" not in result["content"]
+    assert "note" in result
+
+
+def test_read_file_explicit_range_beyond_cap_not_truncated(tmp_path):
+    (tmp_path / "big.py").write_text("\n".join(f"x{i} = {i}" for i in range(500)) + "\n")
+
+    result = read_file(tmp_path, "big.py", start_line=1, end_line=400)
+
+    assert result["end_line"] == 400
+    assert "x399 = 399" in result["content"]
+
+
 # -- list_directory -------------------------------------------------------
 
 def test_list_directory_lists_expected_files():

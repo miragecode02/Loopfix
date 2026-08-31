@@ -48,7 +48,16 @@ def run_one(name, task_dir, failure_file):
     image = build_task_image(task_dir) if requirements_file.exists() else None
 
     started_at = time.time()
-    result = fix(str(workspace), task_description, image=image)
+    try:
+        result = fix(str(workspace), task_description, image=image)
+        error = None
+    except Exception as e:
+        # A crash (e.g. an API/rate-limit error) is a real outcome for
+        # this task, not a reason to abort the whole benchmark run -
+        # every discovered task must still get a row and a log.
+        result = {"model": None, "resolved": False, "test_iterations": None,
+                   "report": f"ERROR: {e}", "call_log": []}
+        error = str(e)
     finished_at = time.time()
 
     diff_proc = subprocess.run(["git", "diff"], cwd=workspace, capture_output=True, text=True)
@@ -62,7 +71,7 @@ def run_one(name, task_dir, failure_file):
         started_at=started_at,
         finished_at=finished_at,
         task_id=f"eval-{name}-{int(started_at)}",
-        extra={"diff": diff_proc.stdout, "benchmark_task": name},
+        extra={"diff": diff_proc.stdout, "benchmark_task": name, "error": error},
     )
     log_path = save_log(log)
 
@@ -74,26 +83,35 @@ def run_one(name, task_dir, failure_file):
         "duration_seconds": round(finished_at - started_at, 2),
         "log_path": str(log_path),
         "model": result["model"],
+        "error": error,
     }
 
 
 def print_summary(results):
     total = len(results)
     resolved_count = sum(1 for r in results if r["resolved"])
-    avg_iterations = sum(r["test_iterations"] for r in results) / total
-    avg_tool_calls = sum(r["tool_calls"] for r in results) / total
-    avg_duration = sum(r["duration_seconds"] for r in results) / total
+    error_count = sum(1 for r in results if r.get("error"))
+    completed = [r for r in results if not r.get("error")]
 
     print("\n=== BENCHMARK SUMMARY ===")
     print(f"Resolved: {resolved_count}/{total} ({100 * resolved_count / total:.0f}%)")
-    print(f"Avg run_tests iterations: {avg_iterations:.2f}")
-    print(f"Avg tool calls: {avg_tool_calls:.2f}")
-    print(f"Avg duration: {avg_duration:.1f}s")
+    if error_count:
+        print(f"Errored (harness/API failure, not a fix attempt): {error_count}/{total}")
+    if completed:
+        avg_iterations = sum(r["test_iterations"] for r in completed) / len(completed)
+        avg_tool_calls = sum(r["tool_calls"] for r in completed) / len(completed)
+        avg_duration = sum(r["duration_seconds"] for r in completed) / len(completed)
+        print(f"Avg run_tests iterations (completed tasks only): {avg_iterations:.2f}")
+        print(f"Avg tool calls (completed tasks only): {avg_tool_calls:.2f}")
+        print(f"Avg duration (completed tasks only): {avg_duration:.1f}s")
     for r in results:
-        mark = "PASS" if r["resolved"] else "FAIL"
-        print(f"  [{mark}] {r['name']} "
-              f"(iterations={r['test_iterations']}, tool_calls={r['tool_calls']}, "
-              f"{r['duration_seconds']}s)")
+        if r.get("error"):
+            print(f"  [ERROR] {r['name']} - {r['error']}")
+        else:
+            mark = "PASS" if r["resolved"] else "FAIL"
+            print(f"  [{mark}] {r['name']} "
+                  f"(iterations={r['test_iterations']}, tool_calls={r['tool_calls']}, "
+                  f"{r['duration_seconds']}s)")
 
 
 def main():
@@ -109,11 +127,14 @@ def main():
         print(f"--- {name} ---")
         outcome = run_one(name, task_dir, failure_file)
         results.append(outcome)
-        status = "RESOLVED" if outcome["resolved"] else "UNRESOLVED"
-        print(
-            f"{status} in {outcome['test_iterations']} run_tests attempt(s), "
-            f"{outcome['tool_calls']} tool calls, {outcome['duration_seconds']}s"
-        )
+        if outcome.get("error"):
+            print(f"ERROR: {outcome['error']}")
+        else:
+            status = "RESOLVED" if outcome["resolved"] else "UNRESOLVED"
+            print(
+                f"{status} in {outcome['test_iterations']} run_tests attempt(s), "
+                f"{outcome['tool_calls']} tool calls, {outcome['duration_seconds']}s"
+            )
         print(f"log: {outcome['log_path']}\n")
     run_finished_at = time.time()
 
