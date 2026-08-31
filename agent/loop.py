@@ -7,9 +7,11 @@ tools before any write capability is added.
 
 import json
 import os
+import re
+import time
 
 from dotenv import load_dotenv
-from groq import Groq
+from groq import Groq, RateLimitError
 
 from tools.create_file import create_file
 from tools.edit_file import edit_file
@@ -29,6 +31,49 @@ MAX_TOOL_CALLS = 15
 MAX_FIX_TOOL_CALLS = 40
 MAX_FIX_ITERATIONS = 5  # hard cap on run_tests attempts, per the bounded debug loop spec
 TEMPERATURE = 0.2  # low, per Groq's tool-calling guidance, for reliable structured calls
+
+# Groq's free-tier on_demand limit (8000 TPM) is charged against prompt
+# tokens *plus* the completion budget reserved for the request, so an
+# unbounded max_completion_tokens can blow the limit even on a tiny
+# prompt. Cap every call's reserved output explicitly.
+MAX_COMPLETION_TOKENS = 1024
+MAX_GROQ_RETRIES = 5
+_RETRY_WAIT_RE = re.compile(r"try again in ([\d.]+)(ms|s)\b")
+# Keep only the N most recent tool results verbatim; older ones are
+# replaced with a placeholder so a long-running loop's request doesn't
+# keep growing past the shared per-minute token budget.
+KEEP_RECENT_TOOL_OUTPUTS = 4
+
+
+def _parse_retry_wait_seconds(message):
+    match = _RETRY_WAIT_RE.search(message)
+    if not match:
+        return None
+    value, unit = match.groups()
+    return float(value) / 1000 if unit == "ms" else float(value)
+
+
+def _create_with_retry(client, **kwargs):
+    kwargs.setdefault("max_completion_tokens", MAX_COMPLETION_TOKENS)
+    for attempt in range(MAX_GROQ_RETRIES):
+        try:
+            return client.chat.completions.create(**kwargs)
+        except RateLimitError as e:
+            if attempt == MAX_GROQ_RETRIES - 1:
+                raise
+            wait = _parse_retry_wait_seconds(str(e))
+            time.sleep((wait if wait is not None else 2 ** attempt) + 0.1)
+
+
+def _trim_old_tool_outputs(messages, keep_recent=KEEP_RECENT_TOOL_OUTPUTS):
+    """Blank out old tool-result content once the loop has moved on.
+
+    Only `content` is touched, so the assistant tool_calls / tool
+    tool_call_id pairing Groq's API requires stays structurally intact.
+    """
+    tool_indices = [i for i, m in enumerate(messages) if m.get("role") == "tool"]
+    for i in tool_indices[:-keep_recent] if len(tool_indices) > keep_recent else []:
+        messages[i]["content"] = "[earlier tool output omitted to fit token budget]"
 
 SYSTEM_PROMPT = """You are an investigation-only coding agent. You are given a repo and a \
 description of a test failure (a bounded task: tests broke after a dependency/library \
@@ -125,6 +170,8 @@ def investigate(repo_root, task_description, model=None, max_tool_calls=MAX_TOOL
     total_calls = 0
 
     while True:
+        _trim_old_tool_outputs(messages)
+
         if total_calls >= max_tool_calls:
             messages.append({
                 "role": "user",
@@ -133,13 +180,14 @@ def investigate(repo_root, task_description, model=None, max_tool_calls=MAX_TOOL
                     "the required format, based on what you've found so far."
                 ),
             })
-            response = client.chat.completions.create(
-                model=model, messages=messages, temperature=TEMPERATURE
+            response = _create_with_retry(
+                client, model=model, messages=messages, temperature=TEMPERATURE
             )
             final = response.choices[0].message
             return {"report": final.content, "call_log": call_log, "messages": messages, "model": model}
 
-        response = client.chat.completions.create(
+        response = _create_with_retry(
+            client,
             model=model,
             messages=messages,
             tools=READ_ONLY_TOOL_SCHEMAS,
@@ -226,6 +274,8 @@ def fix(
     resolved = False
 
     while True:
+        _trim_old_tool_outputs(messages)
+
         if resolved or test_iterations >= max_iterations or total_calls >= max_tool_calls:
             if resolved:
                 nudge = "Tests are passing. Give your final report now, marking STATUS: resolved."
@@ -240,8 +290,8 @@ def fix(
                     "marking STATUS: unresolved if tests are not passing."
                 )
             messages.append({"role": "user", "content": nudge})
-            response = client.chat.completions.create(
-                model=model, messages=messages, temperature=TEMPERATURE
+            response = _create_with_retry(
+                client, model=model, messages=messages, temperature=TEMPERATURE
             )
             final = response.choices[0].message
             return {
@@ -253,7 +303,8 @@ def fix(
                 "model": model,
             }
 
-        response = client.chat.completions.create(
+        response = _create_with_retry(
+            client,
             model=model,
             messages=messages,
             tools=ALL_TOOL_SCHEMAS,

@@ -26,6 +26,11 @@ ROOT = Path(__file__).resolve().parent.parent
 BENCHMARK_DIR = ROOT / "sandbox" / "benchmark"
 WORKSPACES_DIR = ROOT / "workspaces"
 
+# Groq's free-tier TPM budget is shared across the whole run, not
+# per-task, so back-to-back tasks can exhaust it even with per-call
+# retries. A cooldown between tasks lets the per-minute window recover.
+TASK_COOLDOWN_SECONDS = 20
+
 
 def discover_tasks():
     """Find every (name, task_dir, failure_file) under sandbox/benchmark/."""
@@ -123,7 +128,7 @@ def main():
     print(f"Running {len(tasks)} benchmark task(s)...\n")
     run_started_at = time.time()
     results = []
-    for name, task_dir, failure_file in tasks:
+    for i, (name, task_dir, failure_file) in enumerate(tasks):
         print(f"--- {name} ---")
         outcome = run_one(name, task_dir, failure_file)
         results.append(outcome)
@@ -136,6 +141,8 @@ def main():
                 f"{outcome['tool_calls']} tool calls, {outcome['duration_seconds']}s"
             )
         print(f"log: {outcome['log_path']}\n")
+        if i < len(tasks) - 1:
+            time.sleep(TASK_COOLDOWN_SECONDS)
     run_finished_at = time.time()
 
     print_summary(results)
