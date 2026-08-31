@@ -59,9 +59,15 @@ def _create_with_retry(client, **kwargs):
         try:
             return client.chat.completions.create(**kwargs)
         except RateLimitError as e:
+            message = str(e)
+            if "tokens per day" in message or "(TPD)" in message:
+                # A daily quota needs a wait measured in minutes/hours, not
+                # a backoff loop - retrying just burns more of an already
+                # exhausted budget for no chance of success.
+                raise
             if attempt == MAX_GROQ_RETRIES - 1:
                 raise
-            wait = _parse_retry_wait_seconds(str(e))
+            wait = _parse_retry_wait_seconds(message)
             time.sleep((wait if wait is not None else 2 ** attempt) + 0.1)
 
 
