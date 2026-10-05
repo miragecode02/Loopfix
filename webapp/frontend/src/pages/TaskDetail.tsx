@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, type TaskLog } from '../api'
 import CopyButton from '../components/CopyButton'
 import DiffView from '../components/DiffView'
 import FeedbackState, { LoadingState } from '../components/FeedbackState'
+import InfoTip from '../components/InfoTip'
 import ReportCard from '../components/ReportCard'
 import StatusBadge from '../components/StatusBadge'
 import Timeline from '../components/Timeline'
@@ -19,10 +21,13 @@ function formatDuration(seconds: number) {
   return remainder ? `${minutes}m ${remainder}s` : `${minutes}m`
 }
 
-function SummaryItem({ label, value }: { label: string; value: string }) {
+function SummaryItem({ label, value, tip }: { label: string; value: string; tip?: ReactNode }) {
   return (
     <div className="metric-cell">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>{label}</div>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+        {label}
+        {tip && <InfoTip label={label}>{tip}</InfoTip>}
+      </div>
       <div className="mt-2 break-words text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{value}</div>
     </div>
   )
@@ -92,10 +97,10 @@ export default function TaskDetail({ refreshKey }: { refreshKey: number }) {
       </header>
 
       <section aria-label="Task summary" className="metric-strip">
-        <SummaryItem label="Duration" value={formatDuration(log.duration_seconds)} />
-        <SummaryItem label="Tool calls" value={String(log.call_log.length)} />
-        <SummaryItem label="Test attempts" value={log.test_iterations == null ? 'Not recorded' : String(log.test_iterations)} />
-        <SummaryItem label="Model" value={log.model ?? 'Not recorded'} />
+        <SummaryItem label="Duration" value={formatDuration(log.duration_seconds)} tip="Wall-clock time from the agent starting to its final report." />
+        <SummaryItem label="Tool calls" value={String(log.call_log.length)} tip="How many actions the agent took — reading files, searching, editing, running tests. See the Activity tab for each one." />
+        <SummaryItem label="Test attempts" value={log.test_iterations == null ? 'Not recorded' : String(log.test_iterations)} tip="How many times the agent ran the test suite in the sandbox while iterating toward a fix (capped per run)." />
+        <SummaryItem label="Model" value={log.model ?? 'Not recorded'} tip="The LLM that drove the agent loop for this task." />
       </section>
 
       {log.error && (

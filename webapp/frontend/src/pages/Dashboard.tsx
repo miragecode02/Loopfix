@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, TerminalWindow } from '@phosphor-icons/react'
+import { ArrowRight, ArrowUpRight, TerminalWindow } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { api, type RunSummary } from '../api'
 import CopyButton from '../components/CopyButton'
 import FeedbackState, { LoadingState } from '../components/FeedbackState'
+import GuideCallout from '../components/GuideCallout'
+import InfoTip from '../components/InfoTip'
 import RunComparison from '../components/RunComparison'
 import RunHistory from '../components/RunHistory'
 import RunsChart from '../components/RunsChart'
@@ -113,16 +115,30 @@ export default function Dashboard({ refreshKey }: { refreshKey: number }) {
         </motion.aside>
       </header>
 
+      <GuideCallout />
+
       <section aria-label="Benchmark summary" className="metric-strip">
+        <Link to={`/runs/${latest.id}`} className="metric-cell metric-cell-link">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
+            Latest resolve rate
+            <InfoTip label="Latest resolve rate">Share of tasks the agent fixed in the most recent benchmark session — passed tests ÷ total tasks.</InfoTip>
+          </div>
+          <div className="mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums" style={{ color: 'var(--accent)' }}>{percent(latest.resolved_count, latest.task_count)}%</div>
+          <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Run #{latest.id} · {latest.resolved_count}/{latest.task_count} tasks</div>
+          <span className="metric-jump">Open this run <ArrowRight size={12} aria-hidden="true" /></span>
+        </Link>
+
         {[
-          { label: 'Latest resolve rate', value: `${percent(latest.resolved_count, latest.task_count)}%`, sub: `Run #${latest.id} · ${latest.resolved_count}/${latest.task_count} tasks`, accent: true },
-          { label: 'All-time best', value: `${bestRate}%`, sub: 'Highest single-run rate' },
-          { label: 'Sessions', value: String(runs.length), sub: 'Recorded benchmark runs' },
-          { label: 'Tasks evaluated', value: String(totalTasks), sub: 'Across all sessions' },
+          { label: 'All-time best', value: `${bestRate}%`, sub: 'Highest single-run rate', tip: 'The best resolve rate across every recorded session — a ceiling, not an average.', align: 'start' as const },
+          { label: 'Sessions', value: String(runs.length), sub: 'Recorded benchmark runs', tip: 'How many full benchmark runs have been recorded in this local database.', align: 'start' as const },
+          { label: 'Tasks evaluated', value: String(totalTasks), sub: 'Across all sessions', tip: 'Total task attempts summed over every session — the same task counts once per session it ran in.', align: 'end' as const },
         ].map((metric) => (
           <div key={metric.label} className="metric-cell">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>{metric.label}</div>
-            <div className="mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums" style={{ color: metric.accent ? 'var(--accent)' : 'var(--text-primary)' }}>{metric.value}</div>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
+              {metric.label}
+              <InfoTip label={metric.label} align={metric.align}>{metric.tip}</InfoTip>
+            </div>
+            <div className="mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums" style={{ color: 'var(--text-primary)' }}>{metric.value}</div>
             <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{metric.sub}</div>
           </div>
         ))}

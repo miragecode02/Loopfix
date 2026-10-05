@@ -120,10 +120,10 @@ export default function RunDetail({ refreshKey }: { refreshKey: number }) {
       </header>
 
       <section aria-label="Run summary" className="metric-strip">
-        <StatTile label="Resolve rate" value={`${resolveRate}%`} sub={`${run.resolved_count} of ${run.task_count} tasks`} accent="var(--status-good)" />
-        <StatTile label="Resolved" value={String(run.resolved_count)} sub="Tasks that passed" accent="var(--status-good)" />
-        <StatTile label="Unresolved" value={String(run.unresolved_count)} sub="Tasks left unresolved" accent="var(--status-critical)" />
-        <StatTile label="Errored" value={String(run.errored_count)} sub={`Duration ${formatDuration(run.finished_at - run.started_at)}`} accent="var(--status-warning)" />
+        <StatTile label="Resolve rate" value={`${resolveRate}%`} sub={`${run.resolved_count} of ${run.task_count} tasks`} accent="var(--status-good)" tip="Passed tasks ÷ total tasks for this session." />
+        <StatTile label="Resolved" value={String(run.resolved_count)} sub="Tasks that passed" accent="var(--status-good)" tip="The agent's patch made the failing tests pass." />
+        <StatTile label="Unresolved" value={String(run.unresolved_count)} sub="Tasks left unresolved" accent="var(--status-critical)" tip="The agent finished but its patch didn't fix the tests." />
+        <StatTile label="Errored" value={String(run.errored_count)} sub={`Duration ${formatDuration(run.finished_at - run.started_at)}`} accent="var(--status-warning)" tip="The run crashed before finishing (usually a model rate limit), so it isn't counted against fix quality." />
       </section>
 
       <section aria-labelledby="tasks-heading" className="space-y-4">
