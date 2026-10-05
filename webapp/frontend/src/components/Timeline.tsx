@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { CaretDown, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ToolCall } from '../api'
+import { toolMeta } from '../utils/tools'
 import CopyButton from './CopyButton'
+import InfoTip from './InfoTip'
 import ToolIcon from './ToolIcon'
 
 function formatValue(value: unknown) {
@@ -23,6 +25,7 @@ function CallEntry({ call, index, open, onToggle }: { call: ToolCall; index: num
   const inputText = formatValue(call.input)
   const outputText = formatValue(call.output)
   const testPassed = runTests?.passed
+  const meta = toolMeta(call.tool)
 
   return (
     <motion.li layout className="relative min-w-0 pb-5 pl-10" transition={{ type: 'spring', stiffness: 320, damping: 28 }}>
@@ -33,7 +36,11 @@ function CallEntry({ call, index, open, onToggle }: { call: ToolCall; index: num
         <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-14 w-full min-w-0 items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)] sm:px-4">
           <span className="min-w-0">
             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <code className="break-all text-xs font-semibold sm:text-sm">{call.tool}</code>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold sm:text-sm">
+                {meta.label}
+                <InfoTip label={meta.label}>{meta.description}</InfoTip>
+              </span>
+              <code className="break-all text-[11px]" style={{ color: 'var(--text-muted)' }}>{call.tool}</code>
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>STEP {index + 1}{call.iteration != null ? ` · ITERATION ${call.iteration}` : ''}</span>
               {runTests && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: runTests.passed ? 'var(--status-good-bg)' : 'var(--status-critical-bg)', color: runTests.passed ? 'var(--status-good)' : 'var(--status-critical)' }}>{runTests.passed ? 'PASSED' : 'FAILED'}</span>}
             </span>
@@ -103,6 +110,9 @@ export default function Timeline({ calls }: { calls: ToolCall[] }) {
 
   return (
     <div className="space-y-4">
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        Every action the agent took, in order. Expand a step to see the exact input it sent and the output it got back.
+      </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="w-full max-w-sm">
           <label htmlFor="timeline-search" className="filter-label">Find an action</label>
