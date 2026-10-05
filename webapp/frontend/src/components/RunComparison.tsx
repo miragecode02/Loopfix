@@ -107,6 +107,12 @@ export default function RunComparison({
                   </div>
                 </div>
                 <div className="mt-2 divide-y" style={{ borderColor: 'var(--border)' }}>
+                  <div className="grid grid-cols-[minmax(5rem,1fr)_auto_auto_auto] items-center gap-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>
+                    <span>Metric</span>
+                    <span className="font-mono tabular-nums">#{earlier.id}</span>
+                    <span className="font-mono tabular-nums">#{later.id}</span>
+                    <span className="min-w-16 text-right">Change</span>
+                  </div>
                   {[
                     { label: 'Resolved', before: `${earlier.resolved_count}/${earlier.task_count}`, after: `${later.resolved_count}/${later.task_count}`, change: delta(later.resolved_count - earlier.resolved_count, ' tasks'), positiveIsGood: true },
                     { label: 'Resolve rate', before: `${rate(earlier)}%`, after: `${rate(later)}%`, change: delta(rate(later) - rate(earlier), ' pp'), positiveIsGood: true },
@@ -115,12 +121,15 @@ export default function RunComparison({
                   ].map((row) => (
                     <div key={row.label} className="grid grid-cols-[minmax(5rem,1fr)_auto_auto_auto] items-center gap-3 py-3 text-sm">
                       <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                      <span className="font-mono text-xs tabular-nums">{row.before}</span>
+                      <span className="font-mono text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>{row.before}</span>
                       <span className="font-mono text-xs font-semibold tabular-nums">{row.after}</span>
                       <span className="min-w-16 text-right font-mono text-xs tabular-nums" style={{ color: row.change.startsWith('+') ? (row.positiveIsGood ? 'var(--status-good)' : 'var(--status-critical)') : row.change.startsWith('−') ? (row.positiveIsGood ? 'var(--status-critical)' : 'var(--status-good)') : 'var(--text-muted)' }}>{row.change}</span>
                     </div>
                   ))}
                 </div>
+                <p className="mt-3 text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  Each row reads earlier → later, then the change. <span style={{ color: 'var(--status-good)' }}>Green</span> marks an improvement, <span style={{ color: 'var(--status-critical)' }}>red</span> a regression. &ldquo;pp&rdquo; is percentage points.
+                </p>
               </motion.div>
             ) : (
               <motion.div

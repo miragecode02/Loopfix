@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { RunSummary } from '../api'
+import InfoTip from './InfoTip'
 
 const SEGMENTS = [
   { key: 'resolved_count', label: 'Resolved', color: 'var(--status-good)' },
@@ -63,10 +64,13 @@ export default function RunsChart({ runs }: { runs: RunSummary[] }) {
     <section className="benchmark-panel min-w-0 overflow-hidden" aria-labelledby="outcome-chart-title">
       <div className="flex flex-col gap-4 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ borderColor: 'var(--border)' }}>
         <div>
-          <h2 id="outcome-chart-title" className="text-sm font-semibold">Outcome distribution</h2>
-          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Select a run to inspect tasks. Toggle an outcome to isolate it.</p>
+          <h2 id="outcome-chart-title" className="flex items-center gap-1.5 text-sm font-semibold">
+            Outcome distribution
+            <InfoTip label="Outcome distribution">Each bar is one session, stacked by task outcome. Taller means more tasks. Click a bar to open that run; use the keys on the right to show or hide an outcome.</InfoTip>
+          </h2>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Click a bar to inspect its tasks. Tap a legend key below to isolate an outcome.</p>
         </div>
-        <div className="flex flex-wrap gap-1.5" aria-label="Toggle chart outcomes">
+        <div className="flex flex-wrap gap-1.5" aria-label="Toggle chart outcomes. Each key shows or hides that outcome in the bars.">
           {SEGMENTS.map((segment) => {
             const selected = visible.has(segment.key)
             const onlySelected = selected && visible.size === 1
