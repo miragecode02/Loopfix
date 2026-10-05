@@ -6,6 +6,7 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import CommandPalette from './components/CommandPalette'
 import FeedbackState from './components/FeedbackState'
 import { LoadingState } from './components/FeedbackState'
+import type { LoadingVariant } from './components/FeedbackState'
 import WorkspaceErrorBoundary from './components/WorkspaceErrorBoundary'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -49,6 +50,13 @@ function titleForPath(pathname: string) {
   if (/^\/runs\/\d+/.test(pathname)) return `Run ${pathname.split('/').at(-1)}`
   if (pathname.startsWith('/tasks/')) return 'Task inspection'
   return 'Workspace'
+}
+
+function loadingVariantForPath(pathname: string): LoadingVariant {
+  if (pathname === '/runs') return 'runs'
+  if (/^\/runs\/\d+/.test(pathname)) return 'runDetail'
+  if (pathname.startsWith('/tasks/')) return 'taskDetail'
+  return 'overview'
 }
 
 function SideNav() {
@@ -207,7 +215,7 @@ export default function App() {
                 layout
               >
                 <WorkspaceErrorBoundary key={location.pathname}>
-                  <Suspense fallback={<LoadingState label={`Loading ${pageTitle.toLowerCase()}`} />}>
+                  <Suspense fallback={<LoadingState label={`Loading ${pageTitle.toLowerCase()}`} variant={loadingVariantForPath(location.pathname)} />}>
                     <Routes location={location}>
                       <Route path="/" element={<Dashboard refreshKey={refreshKey} />} />
                       <Route path="/runs" element={<RunsPage refreshKey={refreshKey} />} />

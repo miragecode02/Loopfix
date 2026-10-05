@@ -68,7 +68,7 @@ export default function TaskDetail({ refreshKey }: { refreshKey: number }) {
   if (!logId) {
     return <FeedbackState eyebrow="Task details" title="The task log ID is missing from this link." action={{ label: 'Browse run history', to: '/runs' }} />
   }
-  if (!log) return <LoadingState label="Loading task details" />
+  if (!log) return <LoadingState label="Loading task details" variant="taskDetail" />
 
   const status = statusOf({ resolved: log.resolved, error: log.error ?? null })
   const tabs: { id: Tab; label: string }[] = [

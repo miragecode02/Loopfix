@@ -98,7 +98,7 @@ export default function RunDetail({ refreshKey }: { refreshKey: number }) {
   if (!validRunId) {
     return <FeedbackState eyebrow="Run details" title="Run IDs must be numeric." action={{ label: 'Browse run history', to: '/runs' }} />
   }
-  if (!data) return <LoadingState label="Loading run details" />
+  if (!data) return <LoadingState label="Loading run details" variant="runDetail" />
 
   const { run, tasks } = data
   const resolveRate = run.task_count > 0 ? Math.round((run.resolved_count / run.task_count) * 100) : 0

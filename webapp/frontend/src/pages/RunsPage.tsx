@@ -32,7 +32,7 @@ export default function RunsPage({ refreshKey }: { refreshKey: number }) {
       />
     )
   }
-  if (!runs) return <LoadingState label="Loading benchmark run history" />
+  if (!runs) return <LoadingState label="Loading benchmark run history" variant="runs" />
 
   return (
     <div className="space-y-6">
