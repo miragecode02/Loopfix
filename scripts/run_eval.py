@@ -149,7 +149,11 @@ def main():
 
     run_id = record_run(
         results,
-        model=results[0]["model"] if results else None,
+        # Any task can error before the model is ever used (e.g. a
+        # rate-limit crash on the very first task), so results[0]["model"]
+        # alone can be None even when every other task in the run recorded
+        # a real model name. Take the first non-null one instead.
+        model=next((r["model"] for r in results if r.get("model")), None),
         started_at=run_started_at,
         finished_at=run_finished_at,
     )

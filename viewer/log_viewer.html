@@ -55,13 +55,18 @@
     padding: 1rem; border: 1px solid var(--border); border-radius: 8px;
     background: var(--card); margin-bottom: 1.5rem;
   }
+  .controls > * { min-width: 0; }
   button, input[type=file]::file-selector-button {
     font: inherit; padding: 0.45rem 0.9rem; border-radius: 6px;
     border: 1px solid var(--border); background: var(--bg); color: var(--fg);
     cursor: pointer;
   }
   button:hover, input[type=file]::file-selector-button:hover { border-color: var(--accent); }
-  .status { font-size: 0.85rem; color: var(--muted); }
+  button:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .status { min-width: 0; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
   .status.error { color: var(--fail); }
 
   .card {
@@ -98,8 +103,8 @@
     margin-bottom: 0.6rem; background: var(--bg);
   }
   .call-head { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
-  .tool-name { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--accent); }
-  .reason { color: var(--muted); font-size: 0.85rem; }
+  .tool-name { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--accent); overflow-wrap: anywhere; }
+  .reason { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
   .call pre { margin: 0.5rem 0 0; }
   .call .field-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 0.4rem; }
 
@@ -108,6 +113,18 @@
   .diff-line-hunk { color: var(--accent); display: block; }
 
   footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+  @media (max-width: 480px) {
+    body { padding: 1.25rem 0.875rem 3rem; }
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: stretch;
+      padding: 0.75rem;
+    }
+    .controls > * { max-width: 100%; }
+    .controls input[type=file], .controls button { width: 100%; }
+    .controls > span:not(.status) { display: none; }
+  }
 </style>
 </head>
 <body>

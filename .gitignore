@@ -18,3 +18,13 @@ build/
 *.log
 workspaces/
 /logs/
+node_modules/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+.playwright/
+
+# Local Claude Code / agent tooling - not part of the Loopfix product
+.claude/
+.agents/
+yoursite-design/
+skills-lock.json
