@@ -47,7 +47,9 @@ def _task_summary(row):
     # won't resolve on a different machine (or deployment) than the one that
     # produced it. The log filename stem is portable, so re-resolve it
     # against this process's LOGS_DIR instead of trusting the stored path.
-    log_id = Path(log_path).stem if log_path else None
+    # These paths were recorded on Windows (backslash-separated); pathlib on
+    # a POSIX runtime doesn't treat "\" as a separator, so normalize first.
+    log_id = Path(log_path.replace("\\", "/")).stem if log_path else None
     task["log_id"] = log_id
     task["error"] = None
     resolved_path = LOGS_DIR / f"{log_id}.json" if log_id else None
