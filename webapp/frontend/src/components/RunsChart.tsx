@@ -4,10 +4,18 @@ import { motion } from 'framer-motion'
 import type { RunSummary } from '../api'
 import InfoTip from './InfoTip'
 
+// Fixed, theme-independent fill colors for this chart's stacked segments -
+// distinct from the shared --status-* text tokens used for badges/diffs
+// elsewhere. Those read fine for normal vision but a deuteranopia reader
+// can't tell --status-good from --status-warning apart (validated ΔE 1.2,
+// see the dataviz skill's validator); this triplet keeps good/warning/
+// critical separable for every vision type while matching the mitigation
+// the skill requires (icon/label pairing - here, the legend + direct
+// value labels already do that).
 const SEGMENTS = [
-  { key: 'resolved_count', label: 'Resolved', color: 'var(--status-good)' },
-  { key: 'unresolved_count', label: 'Unresolved', color: 'var(--status-critical)' },
-  { key: 'errored_count', label: 'Errored', color: 'var(--status-warning)' },
+  { key: 'resolved_count', label: 'Resolved', color: '#0ca30c' },
+  { key: 'unresolved_count', label: 'Unresolved', color: '#d03b3b' },
+  { key: 'errored_count', label: 'Errored', color: '#fab219' },
 ] as const
 
 type SegmentKey = (typeof SEGMENTS)[number]['key']
@@ -17,6 +25,7 @@ const CHART_H = 228
 const PAD_L = 36
 const PAD_B = 34
 const MAX_CHART_WIDTH = 760
+const SEGMENT_GAP = 2
 
 function totalForRun(run: RunSummary, visible: Set<SegmentKey>) {
   return SEGMENTS.reduce((total, segment) => total + (visible.has(segment.key) ? run[segment.key] : 0), 0)
@@ -118,17 +127,19 @@ export default function RunsChart({ runs }: { runs: RunSummary[] }) {
                 className="chart-run"
               >
                 {outcomes.map(({ segment, value }) => {
-                  const height = Math.max(yScale(value), 1)
-                  const y = yCursor - height
+                  const slotHeight = Math.max(yScale(value), 1)
+                  const y = yCursor - slotHeight
                   yCursor = y
+                  const height = Math.max(slotHeight - SEGMENT_GAP, 1)
+                  const renderY = y + (slotHeight - height) / 2
                   return (
                     <rect
                       key={segment.key}
                       x={x}
-                      y={y}
+                      y={renderY}
                       width={barWidth}
                       height={height}
-                      rx={3}
+                      rx={4}
                       fill={segment.color}
                       onMouseEnter={(event) => setHover({ runId: run.id, seg: segment.key, value, x: event.clientX, y: event.clientY })}
                       onMouseLeave={() => setHover(null)}
