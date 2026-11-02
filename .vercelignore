@@ -1,0 +1,18 @@
+# Local agent tooling and benchmark fixtures that the deployed dashboard
+# never needs - excluded explicitly because the Python function bundler
+# walks the working directory rather than respecting .gitignore.
+.agents/
+.claude/
+.playwright/
+.playwright-cli/
+workspaces/
+sandbox/
+examples/
+viewer/
+docs/
+tests/
+yoursite-design/
+.pytest_cache/
+__pycache__/
+*.pyc
+logs/*.log

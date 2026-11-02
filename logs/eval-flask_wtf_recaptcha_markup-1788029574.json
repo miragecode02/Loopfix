@@ -1,0 +1,18 @@
+{
+  "task_id": "eval-flask_wtf_recaptcha_markup-1788029574",
+  "mode": "fix",
+  "repo_root": "C:\\Mirage\\Projects\\Loopfix\\workspaces\\flask_wtf_recaptcha_markup-1bea6133",
+  "task_description": "Tests are failing in this repo after a dependency/library version bump.\n\nFailing pytest output:\nCaptured by running `sandbox/runner.py` against this repo (real Docker\nsandbox run, not fabricated):\n\n============================= test session starts ==============================\nplatform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11\ncachedir: .pytest_cache\nrootdir: /workspace\ncollecting ... collected 0 items / 1 error\n\n==================================== ERRORS ====================================\n___________________ ERROR collecting tests/test_recaptcha.py ___________________\nImportError while importing test module '/workspace/tests/test_recaptcha.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_recaptcha.py:8: in <module>\n    from flask_wtf import FlaskForm\nflask_wtf/__init__.py:4: in <module>\n    from .recaptcha import Recaptcha\nflask_wtf/recaptcha/__init__.py:1: in <module>\n    from .fields import RecaptchaField\nflask_wtf/recaptcha/fields.py:3: in <module>\n    from . import widgets\nflask_wtf/recaptcha/widgets.py:3: in <module>\n    from flask import Markup\nE   ImportError: cannot import name 'Markup' from 'flask' (/usr/local/lib/python3.11/site-packages/flask/__init__.py)\n=========================== short test summary info ============================\nERROR tests/test_recaptcha.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n=============================== 1 error in 0.62s ===============================\n\nFind the root cause and fix it so the tests pass.",
+  "model": null,
+  "max_iterations": 5,
+  "started_at": 1788029574.8502743,
+  "finished_at": 1788029612.587638,
+  "duration_seconds": 37.74,
+  "resolved": false,
+  "test_iterations": null,
+  "report": "ERROR: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198639, Requested 3175. Please try again in 13m3.648s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+  "call_log": [],
+  "diff": "",
+  "benchmark_task": "flask_wtf_recaptcha_markup",
+  "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198639, Requested 3175. Please try again in 13m3.648s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+}

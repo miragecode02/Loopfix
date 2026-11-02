@@ -1,0 +1,18 @@
+{
+  "task_id": "eval-flask_login_url_decode-1788174370",
+  "mode": "fix",
+  "repo_root": "C:\\Mirage\\Projects\\Loopfix\\workspaces\\flask_login_url_decode-c358e028",
+  "task_description": "Tests are failing in this repo after a dependency/library version bump.\n\nFailing pytest output:\nCaptured by running `sandbox/runner.py` against this repo (real Docker\nsandbox run, not fabricated):\n\n============================= test session starts ==============================\nplatform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11\ncachedir: .pytest_cache\nrootdir: /workspace\nconfigfile: pytest.ini\ntestpaths: tests\ncollecting ... collected 0 items / 1 error\n\n==================================== ERRORS ====================================\n___________________ ERROR collecting tests/test_login_url.py ___________________\nImportError while importing test module '/workspace/tests/test_login_url.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_login_url.py:10: in <module>\n    from flask_login import LoginManager\nflask_login/__init__.py:12: in <module>\n    from .login_manager import LoginManager\nflask_login/login_manager.py:33: in <module>\n    from .utils import _create_identifier\nflask_login/utils.py:14: in <module>\n    from werkzeug.urls import url_decode\nE   ImportError: cannot import name 'url_decode' from 'werkzeug.urls' (/usr/local/lib/python3.11/site-packages/werkzeug/urls.py)\n=========================== short test summary info ============================\nERROR tests/test_login_url.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n=============================== 1 error in 0.58s ===============================\n\nFind the root cause and fix it so the tests pass.",
+  "model": null,
+  "max_iterations": 5,
+  "started_at": 1788174370.3336923,
+  "finished_at": 1788174378.3954816,
+  "duration_seconds": 8.06,
+  "resolved": false,
+  "test_iterations": null,
+  "report": "ERROR: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6331, Requested 1778. Please try again in 817.5ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+  "call_log": [],
+  "diff": "",
+  "benchmark_task": "flask_login_url_decode",
+  "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6331, Requested 1778. Please try again in 817.5ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+}

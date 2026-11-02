@@ -6,6 +6,7 @@ already produced.
 """
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -18,9 +19,16 @@ LOGS_DIR = ROOT / "logs"
 
 app = FastAPI(title="Loopfix Viewer API")
 
+# Same-origin deployments (the Vercel setup below serves the frontend and this
+# API from one domain) don't need CORS at all, but local dev runs the Vite
+# server on a different port, and ALLOWED_ORIGINS lets a split deployment
+# (frontend and API on different domains) opt in explicitly.
+_default_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_extra_origins = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_default_origins + _extra_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
@@ -35,11 +43,17 @@ def _connect():
 def _task_summary(row):
     task = dict(row)
     log_path = task["log_path"]
-    task["log_id"] = Path(log_path).stem if log_path else None
+    # log_path is the absolute path the harness recorded at run time, which
+    # won't resolve on a different machine (or deployment) than the one that
+    # produced it. The log filename stem is portable, so re-resolve it
+    # against this process's LOGS_DIR instead of trusting the stored path.
+    log_id = Path(log_path).stem if log_path else None
+    task["log_id"] = log_id
     task["error"] = None
-    if log_path and Path(log_path).is_file():
+    resolved_path = LOGS_DIR / f"{log_id}.json" if log_id else None
+    if resolved_path and resolved_path.is_file():
         try:
-            log = json.loads(Path(log_path).read_text(encoding="utf-8"))
+            log = json.loads(resolved_path.read_text(encoding="utf-8"))
             task["error"] = log.get("error")
         except (OSError, json.JSONDecodeError):
             pass

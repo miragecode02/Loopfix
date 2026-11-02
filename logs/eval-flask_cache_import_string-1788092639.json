@@ -1,0 +1,18 @@
+{
+  "task_id": "eval-flask_cache_import_string-1788092639",
+  "mode": "fix",
+  "repo_root": "C:\\Mirage\\Projects\\Loopfix\\workspaces\\flask_cache_import_string-2964b30c",
+  "task_description": "Tests are failing in this repo after a dependency/library version bump.\n\nFailing pytest output:\nCaptured by running `sandbox/runner.py` against this repo (real Docker\nsandbox run, not fabricated):\n\n============================= test session starts ==============================\nplatform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3.11\ncachedir: .pytest_cache\nrootdir: /workspace\ncollecting ... collected 0 items / 1 error\n\n==================================== ERRORS ====================================\n_____________________ ERROR collecting test_cache_init.py ______________________\nImportError while importing test module '/workspace/test_cache_init.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntest_cache_init.py:3: in <module>\n    from flask_cache import Cache\nflask_cache/__init__.py:24: in <module>\n    from werkzeug import import_string\nE   ImportError: cannot import name 'import_string' from 'werkzeug' (/usr/local/lib/python3.11/site-packages/werkzeug/__init__.py)\n=============================== warnings summary ===============================\nflask_cache/__init__.py:557\n  /workspace/flask_cache/__init__.py:557: DeprecationWarning: invalid escape sequence '\\*'\n    \"\"\"\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nERROR test_cache_init.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n========================= 1 warning, 1 error in 0.50s ==========================\n\nFind the root cause and fix it so the tests pass.",
+  "model": null,
+  "max_iterations": 5,
+  "started_at": 1788092639.3159542,
+  "finished_at": 1788092642.1767933,
+  "duration_seconds": 2.86,
+  "resolved": false,
+  "test_iterations": null,
+  "report": "ERROR: Error code: 413 - {'error': {'message': 'Request too large for model `qwen/qwen3.8-27b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Requested 10745, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+  "call_log": [],
+  "diff": "",
+  "benchmark_task": "flask_cache_import_string",
+  "error": "Error code: 413 - {'error': {'message': 'Request too large for model `qwen/qwen3.8-27b` in organization `org_01kkw7ccttfzkb8ns15edb46rt` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Requested 10745, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+}
