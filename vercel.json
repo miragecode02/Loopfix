@@ -1,13 +1,8 @@
 {
   "buildCommand": "cd webapp/frontend && npm install && npm run build",
-  "outputDirectory": "webapp/frontend/dist",
   "functions": {
     "api/index.py": {
-      "includeFiles": "{loopfix.db,logs/**}"
+      "includeFiles": "{loopfix.db,logs/**,webapp/frontend/dist/**}"
     }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  }
 }
